@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>User Management</title>
+</head>
+<body>
+<h1>User Management</h1>
+<!-- 用户表单 -->
+<form id="user_form">
+    <input type="hidden" id="user_id" value=> <!-- 用户ID -->
+    <label>Username:</label>
+    <input type="text" id="Username" required> <!-- 用户名输入框 -->
+    <br>
+    <label>Email:</label>
+    <input type="email" id="Email" required> <!-- 邮箱输入框 -->
+    <br>
+    <button type="submit">Save</button> <!-- 保存按钮 -->
+    <button type="button" onclick="cancel()">Cancel</button> <!-- 取消按钮 -->
+</form>
+<br>
+<!-- 用户列表 -->
+<table>
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>Username</th>
+        <th>Email</th>
+        <th>Action</th>
+    </tr>
+    </thead>
+    <tbody id="user_list">
+    </tbody>
+</table>
+<script>
+    // 获取用户列表
+    function getUsers() {
+        fetch('/users')
+            .then(response => response.json())
+            .then(data => {
+                renderUsers(data);
+            });
+    }
+
+    // 渲染用户列表
+    function renderUsers(users) {
+        let list = document.getElementById('user_list');
+        list.innerHTML = '';
+        users.forEach(user => {
+            let row = document.createElement('tr');
+            row.innerHTML = `
+                    <td>${user.ID}</td>
+                    <td>${user.Username}</td>
+                    <td>${user.Email}</td>
+                    <td>
+                        <button type="button" onclick="editUser(${user.ID})">Edit</button>
+                        <button type="button" onclick="deleteUser(${user.ID})">Delete</button>
+                    </td>
+                `;
+            list.appendChild(row);
+        });
+    }
+
+    // 创建用户
+    function createUser(user) {
+        fetch(`/users`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(user)
+        })
+            .then(response => {
+                if(!response.ok) {
+                    throw new Error('Failed to create user');
+                }
+                getUsers();
+                document.getElementById('user_form').reset();
+            })
+            .catch(error => {
+                console.log(error.message);
+            });
+    }
+
+    // 更新用户
+    function updateUser(user) {
+        fetch(`/users/${user.id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(user)
+        })
+            .then(response => {
+                if(!response.ok) {
+                    throw new Error('Failed to update user');
+                }
+                getUsers();
+                document.getElementById('user_form').reset();
+            })
+            .catch(error => {
+                console.log(error.message);
+            });
+    }
+
+    // 删除用户
+    function deleteUser(id) {
+        if(confirm('Are you sure you want to delete this user?')) {
+            fetch(`/users/${id}`, { method: 'DELETE' })
+                .then(response => {
+                    if(!response.ok) {
+                        throw new Error('Failed to delete user');
+                    }
+                    getUsers();
+                })
+                .catch(error => {
+                    console.log(error.message);
+                });
+        }
+    }
+
+    // 编辑用户
+    function editUser(id) {
+        fetch(`/users/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('user_id').value = data.ID;
+                document.getElementById('Username').value = data.Username;
+                document.getElementById('Email').value = data.Email;
+            })
+            .catch(error => {
+                console.log(error.message);
+            });
+    }
+
+    // 取消编辑
+    function cancel() {
+        document.getElementById('user_form').reset();
+        document.getElementById('user_id').value = '';
+    }
+
+    // 页面加载完成后执行初始化操作
+    document.addEventListener('DOMContentLoaded', function() {
+        getUsers();
+
+        // 用户表单提交事件处理
+        document.getElementById('user_form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            let user_id = document.getElementById('user_id').value;
+            let username = document.getElementById('Username').value;
+            let email = document.getElementById('Email').value;
+            let user = {id: parseInt(user_id), username: username, email: email };
+            if(user_id) {
+                updateUser(user);
+            } else {
+                delete user['id'];
+                createUser(user);
+            }
+        });
+    });
+</script>
+</body>
+</html>
